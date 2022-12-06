@@ -7,10 +7,10 @@ part 'price_state.dart';
 class PriceCubit extends Cubit<PriceState> {
   PriceCubit()
       : super(
-          const PriceState(),
+          const PriceState.init(),
         );
 
-  set currentPrice(double? price) {
+  void updatePrice(String? subscriptionId, double? price) {
     Color? priceTextColor;
     // compare updated price from tick data to the current price
     if (price != null && state.currentPrice != null) {
@@ -18,10 +18,19 @@ class PriceCubit extends Cubit<PriceState> {
       if (price > state.currentPrice!) priceTextColor = Colors.green;
     } // set the new text color accordingly
     return emit(
-      PriceState(
-        currentPrice: price,
-        priceTextColor: priceTextColor,
+      PriceState.update(
+        subscriptionId,
+        price,
+        priceTextColor,
       ),
     );
   }
+
+  void reset() => emit(
+        const PriceState(
+          subscriptionId: null,
+          currentPrice: null,
+          priceTextColor: null,
+        ),
+      );
 }

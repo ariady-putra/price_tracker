@@ -83,12 +83,12 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     );
   }
 
-  void _requestForget(String subscriptionId) {
-    widget.priceContext.read<PriceCubit>().currentPrice = null; // clear color
+  void _requestForget() {
+    widget.priceContext.read<PriceCubit>().reset(); // unset price text color
     _channel!.sink.add(
       json.encode(
         {
-          'forget': subscriptionId,
+          'forget': widget.priceState.subscriptionId,
         },
       ),
     );
@@ -188,8 +188,8 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
           widget.assetContext.read<AssetCubit>().unselectAsset();
 
           // Always unsubscribe from any price ticker subscription on market change
-          if (_priceTickerSubscriptionId != null) {
-            _requestForget(_priceTickerSubscriptionId!);
+          if (widget.priceState.subscriptionId != null) {
+            _requestForget();
           }
         },
       ),
@@ -226,8 +226,8 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
           }
 
           // Unsubscribe from any previous price ticker subscription
-          if (_priceTickerSubscriptionId != null) {
-            _requestForget(_priceTickerSubscriptionId!);
+          if (widget.priceState.subscriptionId != null) {
+            _requestForget();
           }
 
           // Subscribe to the selected asset
@@ -237,13 +237,13 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     );
   }
 
-  String? _priceTickerSubscriptionId;
   Widget _assetPrice(Map? tick) {
     if (tick == null) return _loading();
 
-    _priceTickerSubscriptionId = tick['id'];
-
-    widget.priceContext.read<PriceCubit>().currentPrice = tick['quote'];
+    widget.priceContext.read<PriceCubit>().updatePrice(
+          tick['id'],
+          tick['quote'],
+        );
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
