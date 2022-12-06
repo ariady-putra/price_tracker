@@ -1,0 +1,10 @@
+{
+  "appTitle": "Price Tracker",
+  
+  "selectAMarket": "Select a Market",
+  "selectAnAsset": "Select an Asset",
+  
+  "@appTitle": {
+    "description": "Price Tracker"
+  }
+}
