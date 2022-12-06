@@ -1,6 +1,6 @@
-# price_tracker
+# Price Tracker
 
-A new Flutter project.
+A Flutter Price Tracker project.
 
 ## Getting Started
 
