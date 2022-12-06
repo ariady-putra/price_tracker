@@ -37,7 +37,6 @@ class PriceTrackerView extends StatefulWidget {
 
 class _PriceTrackerViewState extends State<PriceTrackerView> {
   WebSocketChannel? _channel;
-
   void _connect() => setState(
         () => _channel = WebSocketChannel.connect(
           Uri.parse(
@@ -46,11 +45,16 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
         ),
       );
 
+  late ValueNotifier<bool> _isSubscribing;
+
   @override
   void initState() {
     super.initState();
+
     _connect();
     _requestActiveSymbols();
+
+    _isSubscribing = ValueNotifier(false);
   }
 
   @override
@@ -70,9 +74,9 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     );
   }
 
-  bool _isSubscribing = false;
-  void _requestTicksStream(String assetSymbol) {
-    _isSubscribing = true;
+  void _requestTicksStream(String? assetSymbol) {
+    if (assetSymbol == null) return; // nothing to subscribe to
+    _isSubscribing.value = true;
     _channel!.sink.add(
       json.encode(
         {
@@ -83,16 +87,17 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     );
   }
 
-  void _requestForget() {
+  void _requestForget(String? subscriptionId) {
+    if (subscriptionId == null) return; // nothing to unsubscribe from
     widget.priceContext.read<PriceCubit>().reset(); // unset price text color
     _channel!.sink.add(
       json.encode(
         {
-          'forget': widget.priceState.subscriptionId,
+          'forget': subscriptionId,
         },
       ),
     );
-    _isSubscribing = false;
+    _isSubscribing.value = false;
   }
 
   void _resetConnection() {
@@ -110,12 +115,12 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
   Map? _distinctMarkets;
   List? _activeSymbols;
   Widget _showMarket(Map data) {
-    _marketData ??= data;
+    _marketData ??= data; // set market data if null
     _activeSymbols ??= _marketData!['active_symbols'];
 
     if (_distinctMarkets == null) {
       _distinctMarkets = {};
-
+      // select distinct markets
       for (final Map activeSymbol in _activeSymbols!) {
         _distinctMarkets!.putIfAbsent(
             activeSymbol['market'], () => activeSymbol['market_display_name']);
@@ -149,11 +154,15 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
               _assetDropdown(_activeSymbols!),
 
               // Price ticker
-              if (_isSubscribing)
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: _assetPrice(data['tick']),
-                ),
+              ValueListenableBuilder(
+                valueListenable: _isSubscribing,
+                builder: (_, isSubscribing, c) => !isSubscribing
+                    ? Container()
+                    : Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: _assetPrice(data['tick']),
+                      ),
+              ),
             ],
           ),
         ),
@@ -188,9 +197,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
           widget.assetContext.read<AssetCubit>().unselectAsset();
 
           // Always unsubscribe from any price ticker subscription on market change
-          if (widget.priceState.subscriptionId != null) {
-            _requestForget();
-          }
+          _requestForget(widget.priceState.subscriptionId);
         },
       ),
     );
@@ -228,9 +235,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
           }
 
           // Unsubscribe from any previous price ticker subscription
-          if (widget.priceState.subscriptionId != null) {
-            _requestForget();
-          }
+          _requestForget(widget.priceState.subscriptionId);
 
           // Subscribe to the selected asset
           _requestTicksStream('${value!.assetSymbol}');
