@@ -6,16 +6,6 @@ class AssetState extends Equatable {
     required this.displayName,
   });
 
-  const AssetState.init({
-    this.assetSymbol,
-    this.displayName,
-  });
-
-  const AssetState.update(
-    this.assetSymbol,
-    this.displayName,
-  );
-
   final String? assetSymbol;
   final String? displayName;
 

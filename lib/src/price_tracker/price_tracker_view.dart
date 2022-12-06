@@ -23,7 +23,7 @@ class PriceTrackerView extends StatefulWidget {
   final MarketState? marketState;
 
   final BuildContext assetContext;
-  final AssetState assetState;
+  final AssetState? assetState;
 
   final BuildContext priceContext;
   final PriceState priceState;
@@ -215,7 +215,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
                 ),
               )
               .toList(),
-      value: widget.assetState.assetSymbol == null ? null : widget.assetState,
+      value: widget.assetState,
       onChanged: (value) => setState(
         () {
           if (value == null) {

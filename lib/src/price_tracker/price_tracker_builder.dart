@@ -11,7 +11,7 @@ class PriceTrackerPageBuilder extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<MarketCubit, MarketState?>(
       builder: (marketContext, marketState) =>
-          BlocBuilder<AssetCubit, AssetState>(
+          BlocBuilder<AssetCubit, AssetState?>(
         builder: (assetContext, assetState) =>
             BlocBuilder<PriceCubit, PriceState>(
           builder: (priceContext, priceState) => PriceTrackerView(

@@ -3,27 +3,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 part 'asset_state.dart';
 
-class AssetCubit extends Cubit<AssetState> {
-  AssetCubit()
-      : super(
-          const AssetState.init(),
-        );
+class AssetCubit extends Cubit<AssetState?> {
+  AssetCubit() : super(null);
 
   void updateCurrentAsset(
     String assetSymbol,
     String displayName,
   ) =>
       emit(
-        AssetState.update(
-          assetSymbol,
-          displayName,
+        AssetState(
+          assetSymbol: assetSymbol,
+          displayName: displayName,
         ),
       );
 
-  void unselectAsset() => emit(
-        const AssetState(
-          assetSymbol: null,
-          displayName: null,
-        ),
-      );
+  void unselectAsset() => emit(null);
 }
