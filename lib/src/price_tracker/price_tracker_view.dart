@@ -65,6 +65,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
   }
 
   void _requestForget(String subscriptionId) {
+    _currentPrice = null;
     _channel!.sink.add(
       json.encode(
         {
@@ -208,13 +209,14 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(' Price: '),
-        Text(
-          ' $_currentPrice ',
+        Text(' ${AppLocalizations.of(context)!.price}: '),
+        AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 500),
           style: TextStyle(
             color: priceTextColor,
             fontWeight: FontWeight.bold,
           ),
+          child: Text(' $_currentPrice '),
         ),
       ],
     );

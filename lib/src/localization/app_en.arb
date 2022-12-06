@@ -3,6 +3,7 @@
   
   "selectAMarket": "Select a Market",
   "selectAnAsset": "Select an Asset",
+  "price": "Price",
   
   "@appTitle": {
     "description": "Price Tracker"
