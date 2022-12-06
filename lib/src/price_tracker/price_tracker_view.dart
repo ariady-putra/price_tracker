@@ -156,12 +156,12 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
               // Price ticker
               ValueListenableBuilder(
                 valueListenable: _isSubscribing,
-                builder: (_, isSubscribing, c) => !isSubscribing
-                    ? Container()
-                    : Padding(
+                builder: (_, isSubscribed, c) => isSubscribed
+                    ? Padding(
                         padding: const EdgeInsets.all(16),
                         child: _assetPrice(data['tick']),
-                      ),
+                      )
+                    : Container(),
               ),
             ],
           ),
