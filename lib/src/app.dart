@@ -72,7 +72,7 @@ class MyApp extends StatelessWidget {
                     return SettingsView(controller: settingsController);
                   case PriceTrackerView.routeName:
                   default:
-                    return const PriceTrackerView();
+                    return const PriceTrackerPageProvider();
                 }
               },
             );

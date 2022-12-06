@@ -9,7 +9,24 @@ import '../settings/settings_view.dart';
 import 'cubit/cubit.dart';
 
 class PriceTrackerView extends StatefulWidget {
-  const PriceTrackerView({super.key});
+  const PriceTrackerView({
+    required this.marketContext,
+    required this.marketState,
+    required this.assetContext,
+    required this.assetState,
+    required this.priceContext,
+    required this.priceState,
+    super.key,
+  });
+
+  final BuildContext marketContext;
+  final MarketState marketState;
+
+  final BuildContext assetContext;
+  final AssetState assetState;
+
+  final BuildContext priceContext;
+  final PriceState priceState;
 
   static const routeName = '/price_tracker';
   static const appId = 1089;
@@ -66,11 +83,8 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     );
   }
 
-  void _requestForget({
-    required String subscriptionId,
-    required BuildContext priceContext,
-  }) {
-    priceContext.read<PriceCubit>().currentPrice = null; // to clear text color
+  void _requestForget(String subscriptionId) {
+    widget.priceContext.read<PriceCubit>().currentPrice = null; // clear color
     _channel!.sink.add(
       json.encode(
         {
@@ -81,7 +95,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     _isSubscribing = false;
   }
 
-  void _reconnect() {
+  void _resetConnection() {
     _channel!.sink.close();
     _connect();
   }
@@ -123,70 +137,31 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
           ),
         ],
       ),
-      body: BlocProvider(
-        create: (_) => MarketCubit(),
-        child: BlocProvider(
-          create: (_) => AssetCubit(),
-          child: BlocProvider(
-            create: (_) => PriceCubit(),
-            child: BlocBuilder<MarketCubit, MarketState>(
-              builder: (marketContext, marketState) =>
-                  BlocBuilder<AssetCubit, AssetState>(
-                builder: (assetContext, assetState) =>
-                    BlocBuilder<PriceCubit, PriceState>(
-                  builder: (priceContext, priceState) => Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          // Market selection
-                          _marketDropdown(
-                            marketMapEntries: _distinctMarkets!.entries,
-                            marketState: marketState,
-                            marketContext: marketContext,
-                            assetContext: assetContext,
-                            priceContext: priceContext,
-                          ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Center(
+          child: Column(
+            children: [
+              // Market selection
+              _marketDropdown(_distinctMarkets!.entries),
 
-                          // Asset selection
-                          _assetDropdown(
-                            activeSymbolList: _activeSymbols!,
-                            selectedMarket: marketState.market,
-                            assetState: assetState,
-                            assetContext: assetContext,
-                            priceContext: priceContext,
-                          ),
+              // Asset selection
+              _assetDropdown(_activeSymbols!),
 
-                          // Price ticker
-                          if (_isSubscribing)
-                            Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: _assetPrice(
-                                tick: data['tick'],
-                                priceState: priceState,
-                                priceContext: priceContext,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
+              // Price ticker
+              if (_isSubscribing)
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: _assetPrice(data['tick']),
                 ),
-              ),
-            ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _marketDropdown({
-    required Iterable marketMapEntries,
-    required MarketState marketState,
-    required BuildContext marketContext,
-    required BuildContext assetContext,
-    required BuildContext priceContext,
-  }) {
+  Widget _marketDropdown(Iterable marketMapEntries) {
     return DropdownButton(
       hint: Text(AppLocalizations.of(context)!.selectAMarket),
       items: marketMapEntries
@@ -200,42 +175,33 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
             ),
           )
           .toList(),
-      value: marketState.market == null ? null : marketState,
+      value: widget.marketState.market == null ? null : widget.marketState,
       onChanged: (value) => setState(
         () {
           if (value == null) {
-            marketContext.read<MarketCubit>().unselectMarket();
+            widget.marketContext.read<MarketCubit>().unselectMarket();
           } else {
-            marketContext
+            widget.marketContext
                 .read<MarketCubit>()
                 .updateCurrentMarket(value.market!, value.displayName!);
           }
-          assetContext.read<AssetCubit>().unselectAsset();
+          widget.assetContext.read<AssetCubit>().unselectAsset();
 
           // Always unsubscribe from any price ticker subscription on market change
           if (_priceTickerSubscriptionId != null) {
-            _requestForget(
-              subscriptionId: _priceTickerSubscriptionId!,
-              priceContext: priceContext,
-            );
+            _requestForget(_priceTickerSubscriptionId!);
           }
         },
       ),
     );
   }
 
-  Widget _assetDropdown({
-    required List activeSymbolList,
-    required String? selectedMarket,
-    required AssetState assetState,
-    required BuildContext assetContext,
-    required BuildContext priceContext,
-  }) {
+  Widget _assetDropdown(List activeSymbolList) {
     return DropdownButton(
       hint: Text(AppLocalizations.of(context)!.selectAnAsset),
       items: activeSymbolList
           .where(
-            (element) => element['market'] == selectedMarket,
+            (element) => element['market'] == widget.marketState.market,
           )
           .map(
             (e) => DropdownMenuItem(
@@ -247,13 +213,13 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
             ),
           )
           .toList(),
-      value: assetState.assetSymbol == null ? null : assetState,
+      value: widget.assetState.assetSymbol == null ? null : widget.assetState,
       onChanged: (value) => setState(
         () {
           if (value == null) {
-            assetContext.read<AssetCubit>().unselectAsset();
+            widget.assetContext.read<AssetCubit>().unselectAsset();
           } else {
-            assetContext.read<AssetCubit>().updateCurrentAsset(
+            widget.assetContext.read<AssetCubit>().updateCurrentAsset(
                   value.assetSymbol!,
                   value.displayName!,
                 );
@@ -261,10 +227,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
 
           // Unsubscribe from any previous price ticker subscription
           if (_priceTickerSubscriptionId != null) {
-            _requestForget(
-              subscriptionId: _priceTickerSubscriptionId!,
-              priceContext: priceContext,
-            );
+            _requestForget(_priceTickerSubscriptionId!);
           }
 
           // Subscribe to the selected asset
@@ -275,16 +238,12 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
   }
 
   String? _priceTickerSubscriptionId;
-  Widget _assetPrice({
-    required Map? tick,
-    required PriceState priceState,
-    required BuildContext priceContext,
-  }) {
+  Widget _assetPrice(Map? tick) {
     if (tick == null) return _loading();
 
     _priceTickerSubscriptionId = tick['id'];
 
-    priceContext.read<PriceCubit>().currentPrice = tick['quote'];
+    widget.priceContext.read<PriceCubit>().currentPrice = tick['quote'];
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -293,10 +252,10 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
         AnimatedDefaultTextStyle(
           duration: const Duration(milliseconds: 500),
           style: TextStyle(
-            color: priceState.priceTextColor,
+            color: widget.priceState.priceTextColor,
             fontWeight: FontWeight.bold,
           ),
-          child: Text(' ${priceState.currentPrice} '),
+          child: Text(' ${widget.priceState.currentPrice} '),
         ),
       ],
     );
