@@ -6,16 +6,6 @@ class MarketState extends Equatable {
     required this.displayName,
   });
 
-  const MarketState.init({
-    this.market,
-    this.displayName,
-  });
-
-  const MarketState.update(
-    this.market,
-    this.displayName,
-  );
-
   final String? market;
   final String? displayName;
 

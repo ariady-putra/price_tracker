@@ -20,7 +20,7 @@ class PriceTrackerView extends StatefulWidget {
   });
 
   final BuildContext marketContext;
-  final MarketState marketState;
+  final MarketState? marketState;
 
   final BuildContext assetContext;
   final AssetState assetState;
@@ -175,7 +175,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
             ),
           )
           .toList(),
-      value: widget.marketState.market == null ? null : widget.marketState,
+      value: widget.marketState,
       onChanged: (value) => setState(
         () {
           if (value == null) {
@@ -199,20 +199,22 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
   Widget _assetDropdown(List activeSymbolList) {
     return DropdownButton(
       hint: Text(AppLocalizations.of(context)!.selectAnAsset),
-      items: activeSymbolList
-          .where(
-            (element) => element['market'] == widget.marketState.market,
-          )
-          .map(
-            (e) => DropdownMenuItem(
-              value: AssetState(
-                assetSymbol: e['symbol'],
-                displayName: e['display_name'],
-              ),
-              child: Text(e['display_name']),
-            ),
-          )
-          .toList(),
+      items: widget.marketState == null
+          ? <DropdownMenuItem<AssetState>>[]
+          : activeSymbolList
+              .where(
+                (element) => element['market'] == widget.marketState!.market,
+              )
+              .map(
+                (e) => DropdownMenuItem(
+                  value: AssetState(
+                    assetSymbol: e['symbol'],
+                    displayName: e['display_name'],
+                  ),
+                  child: Text(e['display_name']),
+                ),
+              )
+              .toList(),
       value: widget.assetState.assetSymbol == null ? null : widget.assetState,
       onChanged: (value) => setState(
         () {

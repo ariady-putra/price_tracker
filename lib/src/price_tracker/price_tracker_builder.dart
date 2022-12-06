@@ -9,7 +9,7 @@ class PriceTrackerPageBuilder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MarketCubit, MarketState>(
+    return BlocBuilder<MarketCubit, MarketState?>(
       builder: (marketContext, marketState) =>
           BlocBuilder<AssetCubit, AssetState>(
         builder: (assetContext, assetState) =>

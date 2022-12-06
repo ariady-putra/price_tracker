@@ -3,27 +3,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 part 'market_state.dart';
 
-class MarketCubit extends Cubit<MarketState> {
-  MarketCubit()
-      : super(
-          const MarketState.init(),
-        );
+class MarketCubit extends Cubit<MarketState?> {
+  MarketCubit() : super(null);
 
   void updateCurrentMarket(
     String market,
     String displayName,
   ) =>
       emit(
-        MarketState.update(
-          market,
-          displayName,
+        MarketState(
+          market: market,
+          displayName: displayName,
         ),
       );
 
-  void unselectMarket() => emit(
-        const MarketState(
-          market: null,
-          displayName: null,
-        ),
-      );
+  void unselectMarket() => emit(null);
 }
