@@ -1,10 +1,12 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../settings/settings_view.dart';
+import 'cubit/cubit.dart';
 
 class PriceTrackerView extends StatefulWidget {
   const PriceTrackerView({super.key});
@@ -64,8 +66,11 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     );
   }
 
-  void _requestForget(String subscriptionId) {
-    _currentPrice = null;
+  void _requestForget({
+    required String subscriptionId,
+    required BuildContext priceContext,
+  }) {
+    priceContext.read<PriceCubit>().currentPrice = null; // to clear text color
     _channel!.sink.add(
       json.encode(
         {
@@ -118,19 +123,39 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Center(
-          child: Column(
-            children: [
-              _marketDropdown(_distinctMarkets!.entries),
-              _assetDropdown(_activeSymbols!),
-              if (_isSubscribing)
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: _assetPrice(data['tick']),
-                )
-            ],
+      body: BlocProvider(
+        create: (_) => PriceCubit(),
+        child: BlocBuilder<PriceCubit, PriceState>(
+          builder: (priceContext, priceState) => Padding(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: Column(
+                children: [
+                  // Market selection
+                  _marketDropdown(
+                    marketMapEntries: _distinctMarkets!.entries,
+                    priceContext: priceContext,
+                  ),
+
+                  // Asset selection
+                  _assetDropdown(
+                    activeSymbolList: _activeSymbols!,
+                    priceContext: priceContext,
+                  ),
+
+                  // Price ticker
+                  if (_isSubscribing)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: _assetPrice(
+                        tick: data['tick'],
+                        priceState: priceState,
+                        priceContext: priceContext,
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -138,7 +163,10 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
   }
 
   Object? _selectedMarket;
-  Widget _marketDropdown(Iterable marketMapEntries) {
+  Widget _marketDropdown({
+    required Iterable marketMapEntries,
+    required BuildContext priceContext,
+  }) {
     return DropdownButton(
       hint: Text(AppLocalizations.of(context)!.selectAMarket),
       items: marketMapEntries
@@ -154,8 +182,13 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
         () {
           _selectedMarket = value;
           _selectedAsset = null;
+
+          // Always unsubscribe from any price ticker subscription on market change
           if (_priceTickerSubscriptionId != null) {
-            _requestForget(_priceTickerSubscriptionId!);
+            _requestForget(
+              subscriptionId: _priceTickerSubscriptionId!,
+              priceContext: priceContext,
+            );
           }
         },
       ),
@@ -163,7 +196,10 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
   }
 
   Object? _selectedAsset;
-  Widget _assetDropdown(List activeSymbolList) {
+  Widget _assetDropdown({
+    required List activeSymbolList,
+    required BuildContext priceContext,
+  }) {
     return DropdownButton(
       hint: Text(AppLocalizations.of(context)!.selectAnAsset),
       items: activeSymbolList
@@ -182,29 +218,32 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
         () {
           _selectedAsset = value;
 
+          // Unsubscribe from any previous price ticker subscription
           if (_priceTickerSubscriptionId != null) {
-            _requestForget(_priceTickerSubscriptionId!);
+            _requestForget(
+              subscriptionId: _priceTickerSubscriptionId!,
+              priceContext: priceContext,
+            );
           }
 
+          // Subscribe to a new asset
           _requestTicksStream('$_selectedAsset');
         },
       ),
     );
   }
 
-  double? _currentPrice;
   String? _priceTickerSubscriptionId;
-  Widget _assetPrice(Map? tick) {
+  Widget _assetPrice({
+    required Map? tick,
+    required PriceState priceState,
+    required BuildContext priceContext,
+  }) {
     if (tick == null) return _loading();
 
     _priceTickerSubscriptionId = tick['id'];
 
-    Color? priceTextColor;
-    if (_currentPrice != null) {
-      if (tick['quote'] < _currentPrice) priceTextColor = Colors.red;
-      if (tick['quote'] > _currentPrice) priceTextColor = Colors.green;
-    }
-    _currentPrice = tick['quote'];
+    priceContext.read<PriceCubit>().currentPrice = tick['quote'];
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -213,10 +252,10 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
         AnimatedDefaultTextStyle(
           duration: const Duration(milliseconds: 500),
           style: TextStyle(
-            color: priceTextColor,
+            color: priceState.priceTextColor,
             fontWeight: FontWeight.bold,
           ),
-          child: Text(' $_currentPrice '),
+          child: Text(' ${priceState.currentPrice} '),
         ),
       ],
     );

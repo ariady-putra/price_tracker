@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:developer';
 
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/material.dart';
 
 import 'src/app.dart';
+import 'src/observer.dart';
 import 'src/settings/settings_controller.dart';
 import 'src/settings/settings_service.dart';
 
@@ -13,10 +15,13 @@ Future<void> main() async {
         details.exceptionAsString(),
         stackTrace: details.stack,
       );
+  Bloc.observer = AppBlocObserver();
 
   // Set up the SettingsController, which will glue user settings to multiple
   // Flutter Widgets.
-  final settingsController = SettingsController(SettingsService());
+  final settingsController = SettingsController(
+    SettingsService(),
+  );
 
   // Load the user's preferred theme while the splash screen is displayed.
   // This prevents a sudden theme change when the app is first displayed.
