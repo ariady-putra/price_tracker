@@ -9,15 +9,19 @@ class PriceTrackerPageProvider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => MarketCubit(),
-      child: BlocProvider(
-        create: (_) => AssetCubit(),
-        child: BlocProvider(
-          create: (_) => PriceCubit(),
-          child: const PriceTrackerPageBuilder(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => MarketCubit(),
         ),
-      ),
+        BlocProvider(
+          create: (_) => AssetCubit(),
+        ),
+        BlocProvider(
+          create: (_) => PriceCubit(),
+        ),
+      ],
+      child: const PriceTrackerPageBuilder(),
     );
   }
 }
