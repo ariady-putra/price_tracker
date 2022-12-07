@@ -259,7 +259,8 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
         AnimatedDefaultTextStyle(
           duration: const Duration(milliseconds: 500),
           style: TextStyle(
-            color: widget.priceState.priceTextColor,
+            color: widget.priceState.priceTextColor ??
+                Theme.of(context).textTheme.caption!.color,
             fontWeight: FontWeight.bold,
           ),
           child: Text(' ${widget.priceState.currentPrice} '),
@@ -270,15 +271,13 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: StreamBuilder(
-        stream: _channel!.stream,
-        builder: (context, snapshot) => snapshot.hasData
-            ? _showMarket(
-                json.decode(snapshot.data),
-              )
-            : _loading(),
-      ),
+    return StreamBuilder(
+      stream: _channel!.stream,
+      builder: (context, snapshot) => snapshot.hasData
+          ? _showMarket(
+              json.decode(snapshot.data),
+            )
+          : _loading(),
     );
   }
 }
