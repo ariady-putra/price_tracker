@@ -147,25 +147,36 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Center(
-          child: Column(
-            children: [
-              // Market selection
-              _marketDropdown(_distinctMarkets!.entries),
+          child: ValueListenableBuilder(
+            valueListenable: _isSubscribing,
+            builder: (_, isSubscribed, c) => Stack(
+              children: [
+                // Show the market access
+                Column(
+                  children: [
+                    // Market selection
+                    _marketDropdown(_distinctMarkets!.entries),
 
-              // Asset selection
-              _assetDropdown(_activeSymbols!),
+                    // Asset selection
+                    _assetDropdown(_activeSymbols!),
 
-              // Price ticker
-              ValueListenableBuilder(
-                valueListenable: _isSubscribing,
-                builder: (_, isSubscribed, c) => isSubscribed
-                    ? Padding(
+                    // Price ticker
+                    if (isSubscribed)
+                      Padding(
                         padding: const EdgeInsets.all(16),
                         child: _assetPrice(data['tick']),
-                      )
-                    : Container(),
-              ),
-            ],
+                      ),
+                  ],
+                ),
+
+                // Block the market access while loading
+                if (isSubscribed && data['tick'] == null)
+                  const ModalBarrier(
+                    barrierSemanticsDismissible: false,
+                    dismissible: false,
+                  ),
+              ],
+            ),
           ),
         ),
       ),
