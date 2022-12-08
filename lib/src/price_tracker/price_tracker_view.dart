@@ -102,6 +102,18 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     _isSubscribing.value = false;
   }
 
+  void _requestForgetAll() {
+    widget.priceContext.read<PriceCubit>().reset(); // unset price text color
+    _channel!.sink.add(
+      json.encode(
+        {
+          'forget_all': 'ticks',
+        },
+      ),
+    );
+    _isSubscribing.value = false;
+  }
+
   void _resetConnection() {
     _channel!.sink.close();
     _connect();
@@ -111,6 +123,13 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     return const Center(
       child: CircularProgressIndicator(),
     );
+  }
+
+  Future? _delayShowStopLoadingButton() async {
+    await Future.delayed(
+      const Duration(milliseconds: 2500),
+    );
+    return 1;
   }
 
   Map? _marketData;
@@ -149,31 +168,60 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
         child: Center(
           child: ValueListenableBuilder(
             valueListenable: _isSubscribing,
-            builder: (_, isSubscribed, c) => Stack(
+            builder: (_, isSubscribed, c) => Column(
               children: [
-                // Show the market access
-                Column(
-                  children: [
-                    // Market selection
-                    _marketDropdown(_distinctMarkets!.entries),
+                IntrinsicHeight(
+                  child: Stack(
+                    children: [
+                      // Show the market access
+                      Align(
+                        alignment: Alignment.center,
+                        child: Column(
+                          children: [
+                            // Market selection
+                            _marketDropdown(_distinctMarkets!.entries),
 
-                    // Asset selection
-                    _assetDropdown(_activeSymbols!),
-
-                    // Price ticker
-                    if (isSubscribed)
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: _assetPrice(data['tick']),
+                            // Asset selection
+                            _assetDropdown(_activeSymbols!),
+                          ],
+                        ),
                       ),
-                  ],
+
+                      // Block the market access while loading
+                      if (isSubscribed && data['tick'] == null)
+                        const ModalBarrier(),
+                    ],
+                  ),
                 ),
 
-                // Block the market access while loading
+                // Price ticker
+                if (isSubscribed)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: _assetPrice(data['tick']),
+                  ),
+
+                // If it's loading for too long
                 if (isSubscribed && data['tick'] == null)
-                  const ModalBarrier(
-                    barrierSemanticsDismissible: false,
-                    dismissible: false,
+                  FutureBuilder(
+                    future: _delayShowStopLoadingButton(),
+                    builder: (_, snapshot) => snapshot.hasData
+                        ? ElevatedButton(
+                            onPressed: () => setState(
+                              () {
+                                widget.marketContext
+                                    .read<MarketCubit>()
+                                    .unselectMarket();
+                                widget.assetContext
+                                    .read<AssetCubit>()
+                                    .unselectAsset();
+                                _requestForgetAll();
+                              },
+                            ),
+                            child:
+                                Text(AppLocalizations.of(context)!.stopLoading),
+                          )
+                        : Container(),
                   ),
               ],
             ),
@@ -286,11 +334,16 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
   Widget build(BuildContext context) {
     return StreamBuilder(
       stream: _channel!.stream,
-      builder: (context, snapshot) => snapshot.hasData
-          ? _showMarket(
+      builder: (_, snapshot) {
+        switch (snapshot.connectionState) {
+          case ConnectionState.active:
+            return _showMarket(
               json.decode(snapshot.data),
-            )
-          : _loading(),
+            );
+          default:
+            return _loading();
+        }
+      },
     );
   }
 }
