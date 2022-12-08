@@ -75,28 +75,30 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
   }
 
   void _requestTicksStream(String? assetSymbol) {
-    if (assetSymbol == null) return; // nothing to subscribe to
     _isSubscribing.value = true;
-    _channel!.sink.add(
-      json.encode(
-        {
-          'ticks': assetSymbol,
-          'subscribe': 1,
-        },
-      ),
-    );
+    if (assetSymbol != null) {
+      _channel!.sink.add(
+        json.encode(
+          {
+            'ticks': assetSymbol,
+            'subscribe': 1,
+          },
+        ),
+      );
+    }
   }
 
   void _requestForget(String? subscriptionId) {
-    if (subscriptionId == null) return; // nothing to unsubscribe from
     widget.priceContext.read<PriceCubit>().reset(); // unset price text color
-    _channel!.sink.add(
-      json.encode(
-        {
-          'forget': subscriptionId,
-        },
-      ),
-    );
+    if (subscriptionId != null) {
+      _channel!.sink.add(
+        json.encode(
+          {
+            'forget': subscriptionId,
+          },
+        ),
+      );
+    }
     _isSubscribing.value = false;
   }
 
@@ -248,8 +250,8 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     if (tick == null) return _loading();
 
     widget.priceContext.read<PriceCubit>().updatePrice(
-          tick['id'],
-          tick['quote'],
+          '${tick['id']}',
+          double.parse('${tick['quote']}'),
         );
 
     return Row(
