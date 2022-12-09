@@ -5,6 +5,7 @@
   "selectAnAsset": "Select an Asset",
   "price": "Price",
   "stopLoading": "Stop Loading",
+  "retryConnection": "Retry Connection",
   
   "@appTitle": {
     "description": "Price Tracker"

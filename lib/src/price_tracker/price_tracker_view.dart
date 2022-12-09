@@ -46,6 +46,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
       );
 
   late ValueNotifier<bool> _isSubscribing;
+  late ValueNotifier<bool> _showRetryConnectionButton;
 
   @override
   void initState() {
@@ -55,6 +56,15 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     _requestActiveSymbols();
 
     _isSubscribing = ValueNotifier(false);
+    _showRetryConnectionButton = ValueNotifier(false);
+
+    Future.delayed(
+      const Duration(milliseconds: 2500),
+    ).whenComplete(
+      () => setState(
+        () => _showRetryConnectionButton.value = true,
+      ),
+    );
   }
 
   @override
@@ -115,7 +125,14 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
   }
 
   void _resetConnection() {
-    _channel!.sink.close();
+    widget.marketContext.read<MarketCubit>().unselectMarket();
+    widget.assetContext.read<AssetCubit>().unselectAsset();
+    widget.priceContext.read<PriceCubit>().reset(); // unset price text color
+    _isSubscribing.value = false;
+    try {
+      _channel!.sink.close();
+    } catch (_) {}
+    _channel = null;
     _connect();
   }
 
@@ -125,10 +142,8 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     );
   }
 
-  Future? _delayShowStopLoadingButton() async {
-    await Future.delayed(
-      const Duration(milliseconds: 2500),
-    );
+  Future? _delay(Duration duration) async {
+    await Future.delayed(duration);
     return 1;
   }
 
@@ -202,32 +217,32 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
                   ),
 
                 // If it's loading for too long
-                if (isSubscribed && data['tick'] == null)
-                  FutureBuilder(
-                    future: _delayShowStopLoadingButton(),
-                    builder: (_, snapshot) => snapshot.hasData
-                        ? ElevatedButton(
-                            onPressed: () => setState(
-                              () {
-                                widget.marketContext
-                                    .read<MarketCubit>()
-                                    .unselectMarket();
-                                widget.assetContext
-                                    .read<AssetCubit>()
-                                    .unselectAsset();
-                                _requestForgetAll();
-                              },
-                            ),
-                            child:
-                                Text(AppLocalizations.of(context)!.stopLoading),
-                          )
-                        : Container(),
-                  ),
+                if (isSubscribed && data['tick'] == null) _stopLoadingButton(),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _stopLoadingButton() {
+    return FutureBuilder(
+      future: _delay(
+        const Duration(milliseconds: 2500),
+      ),
+      builder: (_, snapshot) => snapshot.hasData
+          ? ElevatedButton(
+              onPressed: () => setState(
+                () {
+                  widget.marketContext.read<MarketCubit>().unselectMarket();
+                  widget.assetContext.read<AssetCubit>().unselectAsset();
+                  _requestForgetAll();
+                },
+              ),
+              child: Text(AppLocalizations.of(context)!.stopLoading),
+            )
+          : Container(),
     );
   }
 
@@ -330,6 +345,31 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     );
   }
 
+  Widget _retryConnectionButton() {
+    return ValueListenableBuilder(
+      valueListenable: _showRetryConnectionButton,
+      builder: (_, showRetryConnectionButton, c) => showRetryConnectionButton
+          ? ElevatedButton(
+              onPressed: () => setState(
+                () {
+                  _showRetryConnectionButton.value = false;
+                  _resetConnection();
+                  _requestActiveSymbols();
+                  Future.delayed(
+                    const Duration(milliseconds: 2500),
+                  ).whenComplete(
+                    () => setState(
+                      () => _showRetryConnectionButton.value = true,
+                    ),
+                  );
+                },
+              ),
+              child: Text(AppLocalizations.of(context)!.retryConnection),
+            )
+          : const SizedBox(height: 28),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
@@ -341,7 +381,15 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
               json.decode(snapshot.data),
             );
           default:
-            return _loading();
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 44),
+                _loading(),
+                const SizedBox(height: 16),
+                _retryConnectionButton(),
+              ],
+            );
         }
       },
     );
