@@ -49,6 +49,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
       );
 
   late ValueNotifier<bool> _isSubscribing;
+  late ValueNotifier<bool> _showStopLoadingButton;
   late ValueNotifier<bool> _showRetryConnectionButton;
   bool _isRetryingConnection = false;
 
@@ -62,6 +63,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
 
     // Initialize flag-variables
     _isSubscribing = ValueNotifier(false);
+    _showStopLoadingButton = ValueNotifier(false);
     _showRetryConnectionButton = ValueNotifier(false);
 
     // Show the RetryConnection button after waited for too long
@@ -100,6 +102,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
 
     // Dispose flag-variables
     _showRetryConnectionButton.dispose();
+    _showStopLoadingButton.dispose();
     _isSubscribing.dispose();
     super.dispose();
   }
@@ -162,6 +165,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
   }
 
   void _requestTicksStream(String? assetSymbol) {
+    _showStopLoadingButton.value = false;
     _isSubscribing.value = true;
     if (assetSymbol != null) {
       _channel!.sink.add(
@@ -173,6 +177,13 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
         ),
       );
     }
+    Future.delayed(
+      const Duration(milliseconds: 2500),
+    ).whenComplete(
+      () => setState(
+        () => _showStopLoadingButton.value = true,
+      ),
+    );
   }
 
   void _requestForget(String? subscriptionId) {
@@ -211,11 +222,6 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
     } catch (_) {}
     _channel = null;
     _connect();
-  }
-
-  Future? _delay(Duration duration) async {
-    await Future.delayed(duration);
-    return 1;
   }
 
   Map? _marketData;
@@ -298,11 +304,9 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
   }
 
   Widget _stopLoadingButton() {
-    return FutureBuilder(
-      future: _delay(
-        const Duration(milliseconds: 2500),
-      ),
-      builder: (_, snapshot) => snapshot.hasData
+    return ValueListenableBuilder(
+      valueListenable: _showStopLoadingButton,
+      builder: (_, showStopLoadingButton, c) => showStopLoadingButton
           ? ElevatedButton(
               onPressed: () => setState(
                 () {
