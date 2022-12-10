@@ -60,7 +60,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
     _requestActiveSymbols(); // send ActiveSymbols request
     _listenToConnectivityChanged(); // listen for the connection state
 
-    // Flag-variables initialization
+    // Initialize flag-variables
     _isSubscribing = ValueNotifier(false);
     _showRetryConnectionButton = ValueNotifier(false);
 
@@ -97,6 +97,10 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
   @override
   void dispose() {
     _channel!.sink.close(); // close the websocket channel
+
+    // Dispose flag-variables
+    _showRetryConnectionButton.dispose();
+    _isSubscribing.dispose();
     super.dispose();
   }
 
