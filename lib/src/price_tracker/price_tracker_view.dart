@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:dart_ping/dart_ping.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -35,7 +37,8 @@ class PriceTrackerView extends StatefulWidget {
   State<PriceTrackerView> createState() => _PriceTrackerViewState();
 }
 
-class _PriceTrackerViewState extends State<PriceTrackerView> {
+class _PriceTrackerViewState extends State<PriceTrackerView>
+    with WidgetsBindingObserver {
   WebSocketChannel? _channel;
   void _connect() => setState(
         () => _channel = WebSocketChannel.connect(
@@ -47,17 +50,21 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
 
   late ValueNotifier<bool> _isSubscribing;
   late ValueNotifier<bool> _showRetryConnectionButton;
+  bool _isRetryingConnection = false;
 
   @override
   void initState() {
     super.initState();
 
-    _connect();
-    _requestActiveSymbols();
+    _connect(); // initiate the websocket connection
+    _requestActiveSymbols(); // send ActiveSymbols request
+    _listenToConnectivityChanged(); // listen for the connection state
 
+    // Flag-variables initialization
     _isSubscribing = ValueNotifier(false);
     _showRetryConnectionButton = ValueNotifier(false);
 
+    // Show the RetryConnection button after waited for too long
     Future.delayed(
       const Duration(milliseconds: 2500),
     ).whenComplete(
@@ -65,13 +72,79 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
         () => _showRetryConnectionButton.value = true,
       ),
     );
+
+    // Monitor the connection status by pinging the host
+    Ping('binaryws.com').stream.listen(
+          (event) => setState(
+            () {
+              // if connection lost...
+              if (event.error != null) {
+                // and if it's not currently retrying already,
+                if (!_isRetryingConnection) {
+                  // then retrying the connection.
+                  _retryConnection();
+                  _isRetryingConnection = true;
+                }
+              } else {
+                // otherwise reset the connection retry flag
+                _isRetryingConnection = false;
+              }
+            },
+          ),
+        );
   }
 
   @override
   void dispose() {
-    _channel!.sink.close();
+    _channel!.sink.close(); // close the websocket channel
     super.dispose();
   }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    /* connectivity_plus NOTES:
+      Connectivity changes are no longer communicated to Android apps in the background starting with Android O.
+      You should always check for connectivity status when your app is resumed.
+      The broadcast is only useful when your application is in the foreground.
+    */
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _listenToConnectivityChanged();
+        break;
+      default:
+        break;
+    }
+  }
+
+  void _listenToConnectivityChanged() =>
+      Connectivity().onConnectivityChanged.listen(
+        (event) {
+          switch (event) {
+            case ConnectivityResult.none:
+              _retryConnection();
+              break;
+            default:
+              break;
+          }
+        },
+      );
+
+  void _retryConnection() => setState(
+        () {
+          _showRetryConnectionButton.value = false;
+          _resetConnection();
+          _requestActiveSymbols();
+          Future.delayed(
+            const Duration(milliseconds: 2500),
+          ).whenComplete(
+            () => setState(
+              () => _showRetryConnectionButton.value = true,
+            ),
+          );
+        },
+      );
 
   void _requestActiveSymbols() {
     _channel!.sink.add(
@@ -134,12 +207,6 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     } catch (_) {}
     _channel = null;
     _connect();
-  }
-
-  Widget _loading() {
-    return const Center(
-      child: CircularProgressIndicator(),
-    );
   }
 
   Future? _delay(Duration duration) async {
@@ -345,25 +412,18 @@ class _PriceTrackerViewState extends State<PriceTrackerView> {
     );
   }
 
+  Widget _loading() {
+    return const Center(
+      child: CircularProgressIndicator(),
+    );
+  }
+
   Widget _retryConnectionButton() {
     return ValueListenableBuilder(
       valueListenable: _showRetryConnectionButton,
       builder: (_, showRetryConnectionButton, c) => showRetryConnectionButton
           ? ElevatedButton(
-              onPressed: () => setState(
-                () {
-                  _showRetryConnectionButton.value = false;
-                  _resetConnection();
-                  _requestActiveSymbols();
-                  Future.delayed(
-                    const Duration(milliseconds: 2500),
-                  ).whenComplete(
-                    () => setState(
-                      () => _showRetryConnectionButton.value = true,
-                    ),
-                  );
-                },
-              ),
+              onPressed: _retryConnection,
               child: Text(AppLocalizations.of(context)!.retryConnection),
             )
           : const SizedBox(height: 28),

@@ -2,21 +2,23 @@ name: price_tracker
 description: A new Flutter project.
 
 # Prevent accidental publishing to pub.dev.
-publish_to: 'none'
+publish_to: "none"
 
 version: 1.0.0+1
 
 environment:
-  sdk: '>=2.18.5 <3.0.0'
+  sdk: ">=2.18.5 <3.0.0"
 
 dependencies:
-  equatable: ^2.0.5
   flutter:
     sdk: flutter
   flutter_bloc: ^8.1.1
   flutter_localizations:
     sdk: flutter
-  
+
+  connectivity_plus: ^3.0.2
+  dart_ping: ^7.0.2
+  equatable: ^2.0.5
   web_socket_channel: ^2.2.0
 
 dev_dependencies:

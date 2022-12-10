@@ -13,7 +13,9 @@ class PriceCubit extends Cubit<PriceState> {
   void updatePrice(String? subscriptionId, double? price) {
     Color? priceTextColor;
     // compare updated price from tick data to the current price
-    if (price != null && state.currentPrice != null) {
+    if (price != null &&
+        state.currentPrice != null &&
+        subscriptionId == state.subscriptionId) {
       if (price < state.currentPrice!) priceTextColor = Colors.red;
       if (price > state.currentPrice!) priceTextColor = Colors.green;
     } // set the new text color accordingly
