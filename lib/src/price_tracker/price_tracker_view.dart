@@ -9,6 +9,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../settings/settings_view.dart';
 import 'cubit/cubit.dart';
+import 'model/model.dart';
 
 class PriceTrackerView extends StatefulWidget {
   const PriceTrackerView({
@@ -77,11 +78,11 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
 
     // Monitor the connection status by pinging the host
     Ping('binaryws.com').stream.listen(
-          (event) => setState(
+          (ping) => setState(
             () {
-              // if connection lost...
-              if (event.error != null) {
-                // and if it's not currently retrying already,
+              // if connection lost (eg. request time-out)
+              if (ping.error != null) {
+                // and if it's currently not retrying already,
                 if (!_isRetryingConnection) {
                   // then retrying the connection.
                   _retryConnection();
@@ -127,9 +128,9 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
 
   void _listenToConnectivityChanged() =>
       Connectivity().onConnectivityChanged.listen(
-        (event) {
-          switch (event) {
-            case ConnectivityResult.none:
+        (connection) {
+          switch (connection) {
+            case ConnectivityResult.none: // no connection
               _retryConnection();
               break;
             default:
@@ -155,12 +156,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
 
   void _requestActiveSymbols() {
     _channel!.sink.add(
-      json.encode(
-        {
-          'active_symbols': 'brief',
-          'product_type': 'basic',
-        },
-      ),
+      ActiveSymbolsRequest().jsonEncode(),
     );
   }
 
@@ -169,12 +165,10 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
     _isSubscribing.value = true;
     if (assetSymbol != null) {
       _channel!.sink.add(
-        json.encode(
-          {
-            'ticks': assetSymbol,
-            'subscribe': 1,
-          },
-        ),
+        TicksStreamRequest(
+          ticks: assetSymbol,
+          subscribe: 1,
+        ).jsonEncode(),
       );
     }
     Future.delayed(
@@ -190,11 +184,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
     widget.priceContext.read<PriceCubit>().reset(); // unset price text color
     if (subscriptionId != null) {
       _channel!.sink.add(
-        json.encode(
-          {
-            'forget': subscriptionId,
-          },
-        ),
+        ForgetRequest(forget: subscriptionId).jsonEncode(),
       );
     }
     _isSubscribing.value = false;
@@ -203,11 +193,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
   void _requestForgetAll() {
     widget.priceContext.read<PriceCubit>().reset(); // unset price text color
     _channel!.sink.add(
-      json.encode(
-        {
-          'forget_all': 'ticks',
-        },
-      ),
+      ForgetAllRequest.ticks().jsonEncode(),
     );
     _isSubscribing.value = false;
   }
@@ -224,20 +210,26 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
     _connect();
   }
 
-  Map? _marketData;
-  Map? _distinctMarkets;
-  List? _activeSymbols;
-  Widget _showMarket(Map data) {
-    _marketData ??= data; // set market data if null
-    _activeSymbols ??= _marketData!['active_symbols'];
+  final Map<String, String> _distinctMarkets = {};
+  List<ActiveSymbol> _activeSymbols = [];
+  Widget _showMarket(Map<String, dynamic> data) {
+    switch (data['msg_type']) {
+      case 'active_symbols':
+        // set sorted asset list
+        _activeSymbols = ActiveSymbolsResponse.fromJson(data).activeSymbols;
+        _activeSymbols.sort(
+          (a, b) => a.displayOrder.compareTo(b.displayOrder),
+        );
 
-    if (_distinctMarkets == null) {
-      _distinctMarkets = {};
-      // select distinct markets
-      for (final Map activeSymbol in _activeSymbols!) {
-        _distinctMarkets!.putIfAbsent(
-            activeSymbol['market'], () => activeSymbol['market_display_name']);
-      }
+        // reset distinct markets
+        _distinctMarkets.clear();
+        for (final ActiveSymbol activeSymbol in _activeSymbols) {
+          _distinctMarkets.putIfAbsent(
+              activeSymbol.market, () => activeSymbol.marketDisplayName);
+        }
+        break;
+      default:
+        break;
     }
 
     return Scaffold(
@@ -271,10 +263,10 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
                         child: Column(
                           children: [
                             // Market selection
-                            _marketDropdown(_distinctMarkets!.entries),
+                            _marketDropdown(_distinctMarkets.entries),
 
                             // Asset selection
-                            _assetDropdown(_activeSymbols!),
+                            _assetDropdown(_activeSymbols),
                           ],
                         ),
                       ),
@@ -326,24 +318,24 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
       hint: Text(AppLocalizations.of(context)!.selectAMarket),
       items: marketMapEntries
           .map(
-            (e) => DropdownMenuItem(
+            (market) => DropdownMenuItem(
               value: MarketState(
-                market: e.key,
-                displayName: e.value,
+                market: market.key,
+                displayName: market.value,
               ),
-              child: Text(e.value),
+              child: Text(market.value),
             ),
           )
           .toList(),
       value: widget.marketState,
-      onChanged: (value) => setState(
+      onChanged: (market) => setState(
         () {
-          if (value == null) {
+          if (market == null) {
             widget.marketContext.read<MarketCubit>().unselectMarket();
           } else {
             widget.marketContext
                 .read<MarketCubit>()
-                .updateCurrentMarket(value.market!, value.displayName!);
+                .updateCurrentMarket(market.market!, market.displayName!);
           }
           widget.assetContext.read<AssetCubit>().unselectAsset();
 
@@ -354,34 +346,35 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
     );
   }
 
-  Widget _assetDropdown(List activeSymbolList) {
+  Widget _assetDropdown(List<ActiveSymbol> activeSymbolList) {
     return DropdownButton(
       hint: Text(AppLocalizations.of(context)!.selectAnAsset),
       items: widget.marketState == null
           ? <DropdownMenuItem<AssetState>>[]
           : activeSymbolList
               .where(
-                (element) => element['market'] == widget.marketState!.market,
+                (activeSymbol) =>
+                    activeSymbol.market == widget.marketState!.market,
               )
               .map(
-                (e) => DropdownMenuItem(
+                (activeSymbol) => DropdownMenuItem(
                   value: AssetState(
-                    assetSymbol: e['symbol'],
-                    displayName: e['display_name'],
+                    assetSymbol: activeSymbol.symbol,
+                    displayName: activeSymbol.displayName,
                   ),
-                  child: Text(e['display_name']),
+                  child: Text(activeSymbol.displayName),
                 ),
               )
               .toList(),
       value: widget.assetState,
-      onChanged: (value) => setState(
+      onChanged: (asset) => setState(
         () {
-          if (value == null) {
+          if (asset == null) {
             widget.assetContext.read<AssetCubit>().unselectAsset();
           } else {
             widget.assetContext.read<AssetCubit>().updateCurrentAsset(
-                  value.assetSymbol!,
-                  value.displayName!,
+                  asset.assetSymbol!,
+                  asset.displayName!,
                 );
           }
 
@@ -389,7 +382,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
           _requestForget(widget.priceState.subscriptionId);
 
           // Subscribe to the selected asset
-          _requestTicksStream('${value!.assetSymbol}');
+          _requestTicksStream('${asset!.assetSymbol}');
         },
       ),
     );
