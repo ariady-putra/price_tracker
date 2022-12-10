@@ -282,7 +282,13 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('\n${error!.message}\n'),
+                  Text(
+                    '\n${error!.message}\n',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ],
               ),
             ),
