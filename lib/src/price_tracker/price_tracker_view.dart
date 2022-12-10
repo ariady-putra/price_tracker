@@ -248,6 +248,16 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
         break;
     }
 
+    // Handle error if any
+    final Map<String, dynamic>? errorData = data['error'];
+    final bool hasError = errorData != null;
+
+    ResponseError? error;
+    if (hasError) {
+      error = ResponseError.fromJson(errorData);
+      _showStopLoadingButton.value = true;
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.appTitle),
@@ -263,52 +273,71 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Center(
-          child: ValueListenableBuilder(
-            valueListenable: _isSubscribing,
-            builder: (_, isSubscribed, c) => Column(
-              children: [
-                IntrinsicHeight(
-                  child: Stack(
-                    children: [
-                      // Show the market access
-                      Align(
-                        alignment: Alignment.center,
-                        child: Column(
-                          children: [
-                            // Market selection
-                            _marketDropdown(_distinctMarkets.entries),
+      body: Column(
+        children: [
+          // Show error message if any
+          if (hasError)
+            Container(
+              color: Colors.red,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('\n${error!.message}\n'),
+                ],
+              ),
+            ),
 
-                            // Asset selection
-                            _assetDropdown(_activeSymbols),
-                          ],
-                        ),
+          // Market area
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: ValueListenableBuilder(
+                valueListenable: _isSubscribing,
+                builder: (_, isSubscribed, c) => Column(
+                  children: [
+                    // Market and Asset dropdowns
+                    IntrinsicHeight(
+                      child: Stack(
+                        children: [
+                          Align(
+                            alignment: Alignment.center,
+                            child: Column(
+                              children: [
+                                // Market selection
+                                _marketDropdown(_distinctMarkets.entries),
+
+                                // Asset selection
+                                _assetDropdown(_activeSymbols),
+                              ],
+                            ),
+                          ),
+
+                          // Block market and asset dropdowns while loading...
+                          if (isSubscribed && !hasPriceData)
+                            const ModalBarrier(),
+                          // the condition is: subscribed to an asset but no price data yet
+                          // To prevent getting spammed by subscription requests.
+                        ],
+                      ),
+                    ),
+
+                    // Price ticker
+                    if (isSubscribed)
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: hasPriceData
+                            ? _assetPrice(_priceTickData!)
+                            : _loading(),
                       ),
 
-                      // Block the market access while loading...
-                      if (isSubscribed && !hasPriceData) const ModalBarrier(),
-                      // the condition is: subscribed to an asset but no price data yet
-                    ],
-                  ),
+                    // If it's been loading for too long
+                    if (isSubscribed && !hasPriceData) _stopLoadingButton(),
+                  ],
                 ),
-
-                // Price ticker
-                if (isSubscribed)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: hasPriceData
-                        ? _assetPrice(_priceTickData!)
-                        : _loading(),
-                  ),
-
-                // If it's been loading for too long
-                if (isSubscribed && !hasPriceData) _stopLoadingButton(),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -454,11 +483,12 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
       builder: (_, snapshot) {
         switch (snapshot.connectionState) {
           case ConnectionState.active:
-            return _showMarket(
-              json.decode(snapshot.data),
-            );
+            // on connection active:
+            final Map<String, dynamic> data = json.decode(snapshot.data);
+            return _showMarket(data);
 
           default:
+            // not connected yet...
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
