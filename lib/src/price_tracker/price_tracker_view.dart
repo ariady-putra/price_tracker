@@ -442,25 +442,32 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
   }
 
   Widget _assetPrice(TicksStreamResponse price) {
-    widget.priceContext.read<PriceCubit>().updatePrice(
-          price.subscription!.id,
-          double.parse('${price.tick!.quote}'),
-        );
+    // make sure that price tick data is the subscribed one
+    if (price.tick != null &&
+        widget.assetState != null &&
+        price.tick!.symbol == widget.assetState!.assetSymbol) {
+      widget.priceContext.read<PriceCubit>().updatePrice(
+            price.subscription!.id,
+            double.parse('${price.tick!.quote}'),
+          );
+    }
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(' ${AppLocalizations.of(context)!.price}: '),
-        AnimatedDefaultTextStyle(
-          duration: const Duration(milliseconds: 500),
-          style: TextStyle(
-            color: widget.priceState.priceTextColor ??
-                Theme.of(context).textTheme.caption!.color,
-            fontWeight: FontWeight.bold,
-          ),
-          child: Text(' ${widget.priceState.currentPrice} '),
-        ),
-      ],
+      children: widget.priceState.currentPrice == null
+          ? [] // make sure that there's actually a price to display
+          : [
+              Text(' ${AppLocalizations.of(context)!.price}: '),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 500),
+                style: TextStyle(
+                  color: widget.priceState.priceTextColor ??
+                      Theme.of(context).textTheme.caption!.color,
+                  fontWeight: FontWeight.bold,
+                ),
+                child: Text(' ${widget.priceState.currentPrice} '),
+              ),
+            ],
     );
   }
 
