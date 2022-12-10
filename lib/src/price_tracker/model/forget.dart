@@ -56,19 +56,22 @@ class ForgetRequest implements Request {
   }
 */
 class ForgetResponse implements Response {
-  int forget;
+  int? forget;
 
   ForgetResponse({
     required this.forget,
     required this.echoReq,
     required this.msgType,
     this.reqId,
+    this.error,
   });
 
   ForgetRequest echoReq;
   String msgType;
 
   int? reqId;
+
+  ResponseError? error;
 
   factory ForgetResponse.fromJson(Map<String, dynamic> json) =>
       _$ForgetResponseFromJson(json);

@@ -73,22 +73,21 @@ Map<String, dynamic> _$ActiveSymbolsRequestToJson(
 ActiveSymbolsResponse _$ActiveSymbolsResponseFromJson(
         Map<String, dynamic> json) =>
     ActiveSymbolsResponse(
-      activeSymbols: (json['active_symbols'] as List<dynamic>)
-          .map((e) => ActiveSymbol.fromJson(e as Map<String, dynamic>))
+      activeSymbols: (json['active_symbols'] as List<dynamic>?)
+          ?.map((e) => ActiveSymbol.fromJson(e as Map<String, dynamic>))
           .toList(),
       echoReq: ActiveSymbolsRequest.fromJson(
           json['echo_req'] as Map<String, dynamic>),
       msgType: json['msg_type'] as String,
       reqId: json['req_id'] as int?,
+      error: json['error'] == null
+          ? null
+          : ResponseError.fromJson(json['error'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$ActiveSymbolsResponseToJson(
     ActiveSymbolsResponse instance) {
-  final val = <String, dynamic>{
-    'active_symbols': instance.activeSymbols.map((e) => e.toJson()).toList(),
-    'echo_req': instance.echoReq.toJson(),
-    'msg_type': instance.msgType,
-  };
+  final val = <String, dynamic>{};
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -96,6 +95,11 @@ Map<String, dynamic> _$ActiveSymbolsResponseToJson(
     }
   }
 
+  writeNotNull('active_symbols',
+      instance.activeSymbols?.map((e) => e.toJson()).toList());
+  val['echo_req'] = instance.echoReq.toJson();
+  val['msg_type'] = instance.msgType;
   writeNotNull('req_id', instance.reqId);
+  writeNotNull('error', instance.error?.toJson());
   return val;
 }

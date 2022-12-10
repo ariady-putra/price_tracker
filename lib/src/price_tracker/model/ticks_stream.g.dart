@@ -53,21 +53,24 @@ Map<String, dynamic> _$TicksStreamRequestToJson(TicksStreamRequest instance) {
 
 TicksStreamResponse _$TicksStreamResponseFromJson(Map<String, dynamic> json) =>
     TicksStreamResponse(
-      subscription: Map<String, String>.from(json['subscription'] as Map),
-      tick: Tick.fromJson(json['tick'] as Map<String, dynamic>),
+      subscription: json['subscription'] == null
+          ? null
+          : TickSubscription.fromJson(
+              json['subscription'] as Map<String, dynamic>),
+      tick: json['tick'] == null
+          ? null
+          : Tick.fromJson(json['tick'] as Map<String, dynamic>),
       echoReq:
           TicksStreamRequest.fromJson(json['echo_req'] as Map<String, dynamic>),
       msgType: json['msg_type'] as String,
       reqId: json['req_id'] as int?,
+      error: json['error'] == null
+          ? null
+          : ResponseError.fromJson(json['error'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$TicksStreamResponseToJson(TicksStreamResponse instance) {
-  final val = <String, dynamic>{
-    'subscription': instance.subscription,
-    'tick': instance.tick.toJson(),
-    'echo_req': instance.echoReq.toJson(),
-    'msg_type': instance.msgType,
-  };
+  final val = <String, dynamic>{};
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -75,6 +78,21 @@ Map<String, dynamic> _$TicksStreamResponseToJson(TicksStreamResponse instance) {
     }
   }
 
+  writeNotNull('subscription', instance.subscription?.toJson());
+  writeNotNull('tick', instance.tick?.toJson());
+  val['echo_req'] = instance.echoReq.toJson();
+  val['msg_type'] = instance.msgType;
   writeNotNull('req_id', instance.reqId);
+  writeNotNull('error', instance.error?.toJson());
   return val;
 }
+
+TickSubscription _$TickSubscriptionFromJson(Map<String, dynamic> json) =>
+    TickSubscription(
+      id: json['id'] as String,
+    );
+
+Map<String, dynamic> _$TickSubscriptionToJson(TickSubscription instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+    };

@@ -121,6 +121,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
       case AppLifecycleState.resumed:
         _listenToConnectivityChanged();
         break;
+
       default:
         break;
     }
@@ -133,6 +134,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
             case ConnectivityResult.none: // no connection
               _retryConnection();
               break;
+
             default:
               break;
           }
@@ -212,22 +214,36 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
 
   final Map<String, String> _distinctMarkets = {};
   List<ActiveSymbol> _activeSymbols = [];
+  TicksStreamResponse? _priceTickData;
   Widget _showMarket(Map<String, dynamic> data) {
+    bool hasPriceData = false; // whether to render price data or not
+
+    // Process websocket response data based on its msg_type
     switch (data['msg_type']) {
-      case 'active_symbols':
+      case 'active_symbols': // Set market & asset data:
+        final ActiveSymbolsResponse rsp = ActiveSymbolsResponse.fromJson(data);
+        if (rsp.activeSymbols == null || rsp.activeSymbols!.isEmpty) break;
+
         // set sorted asset list
-        _activeSymbols = ActiveSymbolsResponse.fromJson(data).activeSymbols;
+        _activeSymbols = rsp.activeSymbols!;
         _activeSymbols.sort(
           (a, b) => a.displayOrder.compareTo(b.displayOrder),
         );
 
-        // reset distinct markets
-        _distinctMarkets.clear();
+        // set distinct markets
         for (final ActiveSymbol activeSymbol in _activeSymbols) {
           _distinctMarkets.putIfAbsent(
               activeSymbol.market, () => activeSymbol.marketDisplayName);
         }
         break;
+
+      case 'tick': // Set price tick data:
+        _priceTickData = TicksStreamResponse.fromJson(data);
+        hasPriceData = _priceTickData != null &&
+            _priceTickData!.subscription != null &&
+            _priceTickData!.tick != null;
+        break;
+
       default:
         break;
     }
@@ -271,9 +287,9 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
                         ),
                       ),
 
-                      // Block the market access while loading
-                      if (isSubscribed && data['tick'] == null)
-                        const ModalBarrier(),
+                      // Block the market access while loading...
+                      if (isSubscribed && !hasPriceData) const ModalBarrier(),
+                      // the condition is: subscribed to an asset but no price data yet
                     ],
                   ),
                 ),
@@ -282,11 +298,13 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
                 if (isSubscribed)
                   Padding(
                     padding: const EdgeInsets.all(16),
-                    child: _assetPrice(data['tick']),
+                    child: hasPriceData
+                        ? _assetPrice(_priceTickData!)
+                        : _loading(),
                   ),
 
-                // If it's loading for too long
-                if (isSubscribed && data['tick'] == null) _stopLoadingButton(),
+                // If it's been loading for too long
+                if (isSubscribed && !hasPriceData) _stopLoadingButton(),
               ],
             ),
           ),
@@ -388,12 +406,10 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
     );
   }
 
-  Widget _assetPrice(Map? tick) {
-    if (tick == null) return _loading();
-
+  Widget _assetPrice(TicksStreamResponse price) {
     widget.priceContext.read<PriceCubit>().updatePrice(
-          '${tick['id']}',
-          double.parse('${tick['quote']}'),
+          price.subscription!.id,
+          double.parse('${price.tick!.quote}'),
         );
 
     return Row(
@@ -441,6 +457,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
             return _showMarket(
               json.decode(snapshot.data),
             );
+
           default:
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,

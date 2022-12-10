@@ -98,8 +98,8 @@ class TicksStreamRequest implements Request {
   }
 */
 class TicksStreamResponse implements Response {
-  Map<String, String> subscription; // { id: id }
-  Tick tick;
+  TickSubscription? subscription;
+  Tick? tick;
 
   TicksStreamResponse({
     required this.subscription,
@@ -107,12 +107,15 @@ class TicksStreamResponse implements Response {
     required this.echoReq,
     required this.msgType,
     this.reqId,
+    this.error,
   });
 
   TicksStreamRequest echoReq;
   String msgType;
 
   int? reqId;
+
+  ResponseError? error;
 
   factory TicksStreamResponse.fromJson(Map<String, dynamic> json) =>
       _$TicksStreamResponseFromJson(json);
@@ -123,4 +126,25 @@ class TicksStreamResponse implements Response {
   jsonDecode(String source) => TicksStreamResponse.fromJson(
         json.decode(source),
       );
+}
+
+@JsonSerializable(
+  explicitToJson: true,
+  fieldRename: FieldRename.snake,
+  includeIfNull: false,
+)
+/*
+  {
+    "id": "d1ee7d0d-3ca9-fbb4-720b-5312d487185b"
+  }
+*/
+class TickSubscription {
+  String id;
+
+  TickSubscription({required this.id});
+
+  factory TickSubscription.fromJson(Map<String, dynamic> json) =>
+      _$TickSubscriptionFromJson(json);
+
+  Map<String, dynamic> toJson() => _$TickSubscriptionToJson(this);
 }

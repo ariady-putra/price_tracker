@@ -66,19 +66,22 @@ class ForgetAllRequest implements Request {
   }
 */
 class ForgetAllResponse implements Response {
-  List<String> forgetAll; // IDs of the cancelled streams
+  List<String>? forgetAll; // IDs of the cancelled streams
 
   ForgetAllResponse({
     required this.forgetAll,
     required this.echoReq,
     required this.msgType,
     this.reqId,
+    this.error,
   });
 
   ForgetAllRequest echoReq;
   String msgType;
 
   int? reqId;
+
+  ResponseError? error;
 
   factory ForgetAllResponse.fromJson(Map<String, dynamic> json) =>
       _$ForgetAllResponseFromJson(json);

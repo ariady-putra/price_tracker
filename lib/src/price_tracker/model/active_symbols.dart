@@ -107,19 +107,22 @@ class ActiveSymbolsRequest implements Request {
   }
 */
 class ActiveSymbolsResponse implements Response {
-  List<ActiveSymbol> activeSymbols;
+  List<ActiveSymbol>? activeSymbols;
 
   ActiveSymbolsResponse({
     required this.activeSymbols,
     required this.echoReq,
     required this.msgType,
     this.reqId,
+    this.error,
   });
 
   ActiveSymbolsRequest echoReq;
   String msgType;
 
   int? reqId;
+
+  ResponseError? error;
 
   factory ActiveSymbolsResponse.fromJson(Map<String, dynamic> json) =>
       _$ActiveSymbolsResponseFromJson(json);
