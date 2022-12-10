@@ -442,14 +442,20 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
   }
 
   Widget _assetPrice(TicksStreamResponse price) {
-    // make sure that price tick data is the subscribed one
-    if (price.tick != null &&
-        widget.assetState != null &&
-        price.tick!.symbol == widget.assetState!.assetSymbol) {
-      widget.priceContext.read<PriceCubit>().updatePrice(
-            price.subscription!.id,
-            double.parse('${price.tick!.quote}'),
-          );
+    if (price.tick != null && widget.assetState != null) {
+      // make sure that price tick data is the subscribed one
+      if (price.tick!.symbol == widget.assetState!.assetSymbol) {
+        widget.priceContext.read<PriceCubit>().updatePrice(
+              price.tick!.id,
+              double.parse('${price.tick!.quote}'),
+            );
+      } else {
+        // unsubscribe from any other price data received
+        _channel!.sink.add(
+          ForgetRequest(forget: price.tick!.id).jsonEncode(),
+        ); // but don't call _requestForget function!
+        // because we don't want to tamper any other states
+      }
     }
 
     return Row(
