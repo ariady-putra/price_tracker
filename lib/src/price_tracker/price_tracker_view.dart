@@ -255,7 +255,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
     ResponseError? error;
     if (hasError) {
       error = ResponseError.fromJson(errorData);
-      _showStopLoadingButton.value = true;
+      // _showStopLoadingButton.value = true;
     }
 
     return Scaffold(
@@ -318,17 +318,17 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
                             ),
                           ),
 
-                          // Block market and asset dropdowns while loading...
-                          if (isSubscribed && !hasPriceData)
-                            const ModalBarrier(),
-                          // the condition is: subscribed to an asset but no price data yet
-                          // To prevent getting spammed by subscription requests.
+                          // // Block market and asset dropdowns while loading...
+                          // if (isSubscribed && !hasPriceData)
+                          //   const ModalBarrier(),
+                          // // the condition is: subscribed to an asset but no price data yet
+                          // // To prevent getting spammed by subscription requests.
                         ],
                       ),
                     ),
 
                     // Price ticker
-                    if (isSubscribed)
+                    if (!hasError && isSubscribed)
                       Padding(
                         padding: const EdgeInsets.all(16),
                         child: hasPriceData
@@ -337,7 +337,8 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
                       ),
 
                     // If it's been loading for too long
-                    if (isSubscribed && !hasPriceData) _stopLoadingButton(),
+                    if (!hasError && isSubscribed && !hasPriceData)
+                      _stopLoadingButton(),
                   ],
                 ),
               ),
@@ -447,7 +448,7 @@ class _PriceTrackerViewState extends State<PriceTrackerView>
       if (price.tick!.symbol == widget.assetState!.assetSymbol) {
         widget.priceContext.read<PriceCubit>().updatePrice(
               price.tick!.id,
-              double.parse('${price.tick!.quote}'),
+              price.tick!.quote,
             );
       } else {
         // unsubscribe from any other price data received
