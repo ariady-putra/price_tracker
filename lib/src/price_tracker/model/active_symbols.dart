@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'base/base.dart';
+import 'error.dart';
 
 part 'active_symbols.g.dart';
 
@@ -61,7 +61,7 @@ class ActiveSymbol {
     "product_type": "basic"
   }
 */
-class ActiveSymbolsRequest implements Request {
+class ActiveSymbolsRequest {
   String activeSymbols;
   String productType;
 
@@ -83,7 +83,6 @@ class ActiveSymbolsRequest implements Request {
 
   Map<String, dynamic> toJson() => _$ActiveSymbolsRequestToJson(this);
 
-  @override
   String jsonEncode() => json.encode(
         toJson(),
       );
@@ -106,7 +105,7 @@ class ActiveSymbolsRequest implements Request {
     "req_id": 1
   }
 */
-class ActiveSymbolsResponse implements Response {
+class ActiveSymbolsResponse {
   List<ActiveSymbol>? activeSymbols;
 
   ActiveSymbolsResponse({
@@ -129,8 +128,8 @@ class ActiveSymbolsResponse implements Response {
 
   Map<String, dynamic> toJson() => _$ActiveSymbolsResponseToJson(this);
 
-  @override
-  jsonDecode(String source) => ActiveSymbolsResponse.fromJson(
+  factory ActiveSymbolsResponse.jsonDecode(String source) =>
+      ActiveSymbolsResponse.fromJson(
         json.decode(source),
       );
 }

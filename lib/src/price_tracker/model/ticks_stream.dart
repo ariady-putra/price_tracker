@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'base/base.dart';
+import 'error.dart';
 
 part 'ticks_stream.g.dart';
 
@@ -46,7 +46,7 @@ class Tick {
     "subscribe": 1
   }
 */
-class TicksStreamRequest implements Request {
+class TicksStreamRequest {
   String ticks;
   int? subscribe;
 
@@ -65,7 +65,6 @@ class TicksStreamRequest implements Request {
 
   Map<String, dynamic> toJson() => _$TicksStreamRequestToJson(this);
 
-  @override
   String jsonEncode() => json.encode(
         toJson(),
       );
@@ -97,7 +96,7 @@ class TicksStreamRequest implements Request {
     }
   }
 */
-class TicksStreamResponse implements Response {
+class TicksStreamResponse {
   TickSubscription? subscription;
   Tick? tick;
 
@@ -122,8 +121,8 @@ class TicksStreamResponse implements Response {
 
   Map<String, dynamic> toJson() => _$TicksStreamResponseToJson(this);
 
-  @override
-  jsonDecode(String source) => TicksStreamResponse.fromJson(
+  factory TicksStreamResponse.jsonDecode(String source) =>
+      TicksStreamResponse.fromJson(
         json.decode(source),
       );
 }

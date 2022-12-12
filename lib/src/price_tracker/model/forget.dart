@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'base/base.dart';
+import 'error.dart';
 
 part 'forget.g.dart';
 
@@ -16,7 +16,7 @@ part 'forget.g.dart';
     "forget": "d1ee7d0d-3ca9-fbb4-720b-5312d487185b"
   }
 */
-class ForgetRequest implements Request {
+class ForgetRequest {
   String forget;
 
   ForgetRequest({
@@ -33,7 +33,6 @@ class ForgetRequest implements Request {
 
   Map<String, dynamic> toJson() => _$ForgetRequestToJson(this);
 
-  @override
   String jsonEncode() => json.encode(
         toJson(),
       );
@@ -55,7 +54,7 @@ class ForgetRequest implements Request {
     "req_id": 1
   }
 */
-class ForgetResponse implements Response {
+class ForgetResponse {
   int? forget;
 
   ForgetResponse({
@@ -78,8 +77,7 @@ class ForgetResponse implements Response {
 
   Map<String, dynamic> toJson() => _$ForgetResponseToJson(this);
 
-  @override
-  jsonDecode(String source) => ForgetResponse.fromJson(
+  factory ForgetResponse.jsonDecode(String source) => ForgetResponse.fromJson(
         json.decode(source),
       );
 }

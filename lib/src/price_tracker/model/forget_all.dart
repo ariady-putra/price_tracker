@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'base/base.dart';
+import 'error.dart';
 
 part 'forget_all.g.dart';
 
@@ -16,7 +16,7 @@ part 'forget_all.g.dart';
     "forget_all": "ticks"
   }
 */
-class ForgetAllRequest implements Request {
+class ForgetAllRequest {
   List<String> forgetAll;
 
   ForgetAllRequest({
@@ -43,7 +43,6 @@ class ForgetAllRequest implements Request {
 
   Map<String, dynamic> toJson() => _$ForgetAllRequestToJson(this);
 
-  @override
   String jsonEncode() => json.encode(
         toJson(),
       );
@@ -65,7 +64,7 @@ class ForgetAllRequest implements Request {
     "req_id": 1
   }
 */
-class ForgetAllResponse implements Response {
+class ForgetAllResponse {
   List<String>? forgetAll; // IDs of the cancelled streams
 
   ForgetAllResponse({
@@ -88,8 +87,8 @@ class ForgetAllResponse implements Response {
 
   Map<String, dynamic> toJson() => _$ForgetAllResponseToJson(this);
 
-  @override
-  jsonDecode(String source) => ForgetAllResponse.fromJson(
+  factory ForgetAllResponse.jsonDecode(String source) =>
+      ForgetAllResponse.fromJson(
         json.decode(source),
       );
 }
