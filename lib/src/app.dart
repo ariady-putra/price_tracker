@@ -6,7 +6,7 @@ import 'price_tracker/price_tracker.dart';
 import 'settings/settings_controller.dart';
 import 'settings/settings_view.dart';
 
-/// The Widget that configures your application.
+/// The Widget that configures the application.
 class MyApp extends StatelessWidget {
   const MyApp({
     super.key,
