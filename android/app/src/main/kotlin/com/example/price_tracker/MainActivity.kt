@@ -1,4 +1,4 @@
-package com.example.price_tracker
+package ariady_putra.deriv.price_tracker
 
 import io.flutter.embedding.android.FlutterActivity
 
